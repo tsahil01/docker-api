@@ -44,6 +44,9 @@ interface newContainer {
     port: string;
 }
 
+const PORT_TO_CONTAINER: any = {} // { "8000": "containerId" }
+const CONTAINER_TO_PORT: any = {} // { "containerId": "8000" }
+
 async function startTwo(){
     const app = express();
     app.use(express.json());
@@ -72,18 +75,30 @@ async function startTwo(){
             const {image, name}: newContainer = req.body;
             await docker.pull(image);
 
+            const availablePort = ( () => {
+                for(let i=8000; i<=9000; i++){
+                    if (!PORT_TO_CONTAINER[i]) continue;
+                    return `${i}`;
+                }
+            })();
+            if (!availablePort) throw new Error("No Port Available");
+
             const newContainer = await docker.createContainer({
                 Image: image,
                 name: name,
-                Tty: true,
+                Cmd: ["sh"],
                 AttachStdout: true,
+                Tty: true,
                 HostConfig: {
                     PortBindings: {
-                        "80/tcp": [ { HostPort: "8001" } ]
+                        "8000/tcp": [ { HostPort: availablePort } ]
                     }
                 },
             });
             await newContainer.start();
+
+            PORT_TO_CONTAINER[availablePort] = newContainer.id;
+            CONTAINER_TO_PORT[newContainer.id] = availablePort;
 
             await res.json({
                 msg: "Container Created",
