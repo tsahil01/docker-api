@@ -77,7 +77,9 @@ async function startTwo(){
 
             const availablePort = ( () => {
                 for(let i=8000; i<=9000; i++){
-                    if (!PORT_TO_CONTAINER[i]) continue;
+                    if (PORT_TO_CONTAINER[i]) {
+                        continue;
+                    }
                     return `${i}`;
                 }
             })();
